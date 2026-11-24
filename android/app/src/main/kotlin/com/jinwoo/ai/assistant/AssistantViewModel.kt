@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 
 enum class AssistantState { Sleeping, Listening, Processing, Speaking, Error, Offline }
 
-data class ChatLine(val role: String, val text: String)   // role: "user" | "assistant"
+data class ChatLine(val role: String, val text: String)
 
 data class PendingAction(val action: AssistantAction, val args: Map<String, String>, val prompt: String)
 
@@ -44,10 +44,6 @@ data class AssistantUiState(
     val needMicPermission: Boolean = false,
 )
 
-/**
- * Orchestrates one assistant "session": activate -> listen -> (local action | AI) -> speak -> listen again, until the
- * user says stop, stays silent twice, or an action leaves the app (e.g. opens YouTube).
- */
 class AssistantViewModel(app: Application) : AndroidViewModel(app) {
     private val c = (app as JinWooApp).container
     private val _ui = MutableStateFlow(AssistantUiState())
@@ -67,7 +63,6 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun micGranted() = ContextCompat.checkSelfPermission(getApplication<Application>(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
-    // ---------------------------------------------------------------- entry points
     fun activate(fromWake: Boolean) {
         if (session?.isActive == true) return
         if (!micGranted()) { _ui.update { it.copy(needMicPermission = true) }; return }
@@ -76,7 +71,7 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onMic() {
         when {
-            _ui.value.state == AssistantState.Speaking -> c.voice.stop()      // interrupt speech, loop continues to listen
+            _ui.value.state == AssistantState.Speaking -> c.voice.stop()
             session?.isActive == true -> stopSession()
             else -> activate(fromWake = false)
         }
@@ -118,7 +113,6 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissMessage() = _ui.update { it.copy(message = "") }
 
-    // ---------------------------------------------------------------- session loop
     private suspend fun runSession(fromWake: Boolean) {
         c.wakeBus.pause()
         try {
@@ -156,8 +150,6 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun setState(s: AssistantState) = _ui.update { it.copy(state = s) }
 
-    // ---------------------------------------------------------------- command handling
-    /** Returns true if the session should end. */
     private suspend fun handleCommand(text: String): Boolean {
         addLine("user", text)
         _ui.value.pending?.let { p ->
@@ -166,6 +158,7 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             when {
                 t in YES -> return execute(p.action, p.args)
                 t in NO -> { say("Understood. Cancelled."); return false }
+                else -> Unit
             }
         }
         c.actions.match(text)?.let { (a, args) -> return dispatch(a, args) }
