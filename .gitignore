@@ -1,0 +1,18 @@
+# secrets
+.env
+*.jks
+*.keystore
+local.properties
+# builds
+build/
+.gradle/
+*.apk
+*.aab
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+# large optional files you add yourself
+android/app/libs/*.aar
+assets/models/*.onnx
