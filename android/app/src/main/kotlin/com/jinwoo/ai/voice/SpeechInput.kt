@@ -30,7 +30,7 @@ class SpeechInput(private val ctx: Context) {
 
     suspend fun listenOnce(language: String, onPartial: (String) -> Unit): SpeechOutcome = withContext(Dispatchers.Main) {
         if (!available()) return@withContext SpeechOutcome.Failed("Speech recognition is not available on this device.")
-        suspendCancellableCoroutine { cont ->
+        suspendCancellableCoroutine<SpeechOutcome> { cont ->
             val r = SpeechRecognizer.createSpeechRecognizer(ctx)
             fun finish(outcome: SpeechOutcome) {
                 if (cont.isActive) cont.resume(outcome)
